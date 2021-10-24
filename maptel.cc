@@ -85,7 +85,7 @@ void maptel_insert(unsigned long id, char const *tel_src,
         assert(is_correct_id(id));
     }
 
-    dictionaries[id][tel_src] = tel_dst;
+    dictionaries[id][tel_src] = string(tel_dst);
 
     if (debug)
         cerr << "maptel: maptel_insert: inserted\n";
@@ -96,11 +96,16 @@ void maptel_erase(unsigned long id, char const *tel_src) {
         cerr << "maptel: maptel_erase(" << id << ", " << tel_src << ")\n";
         assert(is_correct_id(id));
         assert(is_correct_tel_num(tel_src));
-        if (dictionaries[id].empty())
+    }
+    
+    dict_t &dict = dictionaries[id];
+    if (dict.find(tel_src) == dict.end()) {
+        if (debug)
             cerr << "maptel: maptel_erase: nothing to erase\n";
+        return;
     }
 
-    dictionaries[id].erase(tel_src);
+    dict.erase(tel_src);
 
     if (debug)
         cerr << "maptel: maptel_erase: erased\n";
@@ -110,22 +115,28 @@ void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
                       size_t len) {
     if (debug) {
         cerr << "maptel: maptel_transform(" 
-             << id << ", " << tel_src << ", " << (void *) tel_dst << ")\n";
+             << id << ", " << tel_src << ", " 
+             << (void *) tel_dst << ", " << len << ")\n";
         assert(is_correct_id(id));
         assert(is_correct_tel_num(tel_src));
         assert(tel_dst != NULL && len >= strlen(tel_src));
     }
 
+    char * tel_current = (char *) tel_src;
     dict_t &dict = dictionaries.find(id)->second;
     unordered_map<string, string>::iterator tel_it = dict.find(tel_src);
-    char * tel_ptr = (char *) tel_src;
+    bool tel_changed = tel_it != dict.end();
     while (tel_it != dict.end() && 
-           strcmp(tel_ptr, tel_src) != 0) {
-        tel_ptr = (char *) tel_it->second.c_str();
+        strcmp(tel_it->second.c_str(), tel_src) != 0) {
+        tel_current = (char *) tel_it->second.c_str();
         tel_it = dict.find(tel_it->second);
     }
 
-    strncpy(tel_dst, tel_ptr, len);
-
+    strncpy(tel_dst, tel_current, len);
+    if (debug) {
+        if(strcmp(tel_dst, tel_src) == 0 && tel_changed)
+            cerr << "maptel: maptel_transform: cycle detected\n";
+        cerr << "maptel: maptel_transform: " << tel_src << " -> " << tel_dst << '\n';
+    }
 }
 
