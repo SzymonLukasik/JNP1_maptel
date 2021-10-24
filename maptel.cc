@@ -32,7 +32,10 @@ static bool is_correct_id(unsigned long id) {
 }
 
 static bool is_correct_tel_num(const char * tel_num) {
-    return tel_num != NULL && strlen(tel_num) <= TEL_NUM_MAX_LEN;
+    size_t length = strlen(tel_num);
+    return tel_num != NULL &&
+           length <= TEL_NUM_MAX_LEN &&
+           tel_num[length] == '\0';
 }
 
 unsigned long maptel_create(void) {
