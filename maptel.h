@@ -1,11 +1,13 @@
 #ifndef __MAPTEL_H
 #define __MAPTEL_H
 
+#include<stdlib.h>
+
 #ifdef __cplusplus
+#include<iostream>
+namespace jnp1 {
 extern "C" {
 #endif
-
-#include<stdlib.h>
 
 /* Tworzy słownik i zwraca liczbę naturalną będącą jego identyfikatorem. */
 unsigned long maptel_create(void);
@@ -31,6 +33,7 @@ void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst, size
 extern size_t TEL_NUM_MAX_LEN;
 
 #ifdef __cplusplus
+}
 }
 #endif
 #endif

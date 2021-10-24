@@ -5,7 +5,7 @@
 #include<cstring>
 #include<iostream>
 #include<unordered_map>
-#include<set>
+#include<regex>
 
 #ifndef NDEBUG
     const bool debug = true;
@@ -15,27 +15,50 @@
 
 using namespace std;
 
+namespace jnp1 {
+
 size_t TEL_NUM_MAX_LEN = 22;
 
 using dict_t = unordered_map<string, string>;
 
-static unordered_map<size_t, dict_t> dictionaries = (
+static unordered_map<size_t, dict_t>& dictionaries() {
+    static unordered_map<size_t, dict_t> dictionaries = (
     unordered_map<size_t, dict_t>()
-);
+    );
+    return dictionaries;
+}
+
+static unordered_map<string, unsigned long long>& colors() {
+    static unordered_map<string, unsigned long long> colors = (
+        unordered_map<string, unsigned long long>()
+    );
+    return colors;
+}
+
+static unsigned long long COLOR = 0;
+
+static bool tel_visited(string tel) {
+    unordered_map<string, unsigned long long>::iterator color_it = colors().find(tel);
+    return  color_it != colors().end() && color_it->second == COLOR;
+}
+
 
 static size_t max_id = -1;
 
-set<size_t> free_ids = set<size_t>();
+static vector<size_t>& free_ids() {
+    static vector<size_t> free_ids = vector<size_t>();
+    return free_ids;
+}
 
 static bool is_correct_id(unsigned long id) {
-    return dictionaries.find(id) != dictionaries.end();
+    return dictionaries().find(id) != dictionaries().end();
 }
 
 static bool is_correct_tel_num(const char * tel_num) {
-    size_t length = strlen(tel_num);
-    return tel_num != NULL &&
-           length <= TEL_NUM_MAX_LEN &&
-           tel_num[length] == '\0';
+    static regex tel_num_regex = regex("[0-9]{0,22}");
+    if (tel_num == NULL)
+        return false;
+    return regex_match(tel_num, tel_num_regex);
 }
 
 unsigned long maptel_create(void) {
@@ -43,16 +66,16 @@ unsigned long maptel_create(void) {
         cerr << "maptel: maptel_create()\n";
     
     size_t new_id;
-    if (free_ids.empty()) {
+    if (free_ids().empty()) {
         max_id++;
         new_id = max_id;
     }
     else {
-        new_id = *free_ids.begin();
-        free_ids.erase(new_id);
+        new_id = free_ids().back();
+        free_ids().pop_back();
     }
 
-    dictionaries[new_id] = unordered_map<string, string>();
+    dictionaries()[new_id] = unordered_map<string, string>();
 
     if (debug)
         cerr << "maptel: maptel_create: new map id = " 
@@ -70,9 +93,9 @@ void maptel_delete(unsigned long id) {
     if (id == max_id)
         max_id--;
     else
-        free_ids.insert(id);
+        free_ids().push_back(id);
 
-    dictionaries.erase(id);
+    dictionaries().erase(id);
 
     if (debug)
         cerr << "maptel: maptel_delete: map " << id << " deleted\n";
@@ -88,7 +111,7 @@ void maptel_insert(unsigned long id, char const *tel_src,
         assert(is_correct_id(id));
     }
 
-    dictionaries[id][tel_src] = string(tel_dst);
+    dictionaries()[id][tel_src] = string(tel_dst);
 
     if (debug)
         cerr << "maptel: maptel_insert: inserted\n";
@@ -101,7 +124,7 @@ void maptel_erase(unsigned long id, char const *tel_src) {
         assert(is_correct_tel_num(tel_src));
     }
     
-    dict_t &dict = dictionaries[id];
+    dict_t &dict = dictionaries()[id];
     if (dict.find(tel_src) == dict.end()) {
         if (debug)
             cerr << "maptel: maptel_erase: nothing to erase\n";
@@ -122,24 +145,33 @@ void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
              << (void *) tel_dst << ", " << len << ")\n";
         assert(is_correct_id(id));
         assert(is_correct_tel_num(tel_src));
-        assert(tel_dst != NULL && len >= strlen(tel_src));
+        assert(tel_dst != NULL);
     }
 
-    char * tel_current = (char *) tel_src;
-    dict_t &dict = dictionaries.find(id)->second;
-    unordered_map<string, string>::iterator tel_it = dict.find(tel_src);
-    bool tel_changed = tel_it != dict.end();
-    while (tel_it != dict.end() && 
-        strcmp(tel_it->second.c_str(), tel_src) != 0) {
-        tel_current = (char *) tel_it->second.c_str();
-        tel_it = dict.find(tel_it->second);
+    dict_t &dict = dictionaries().find(id)->second;
+    string tel_current = tel_src;
+    unordered_map<string, string>::iterator next_tel_it = dict.find(tel_src);
+    colors()[tel_current] = COLOR;
+    while (next_tel_it != dict.end() && !tel_visited(next_tel_it->second)) {
+        tel_current = next_tel_it->second;
+        colors()[tel_current] = COLOR;
+        next_tel_it = dict.find(tel_current);
     }
 
-    strncpy(tel_dst, tel_current, len);
+    bool cycle_detected = next_tel_it != dict.end();
+    if (cycle_detected)
+        strncpy(tel_dst, tel_src, len);
+    else
+        strncpy(tel_dst, tel_current.c_str(), len);
+    COLOR++;
+
     if (debug) {
-        if(strcmp(tel_dst, tel_src) == 0 && tel_changed)
+        if(cycle_detected)
             cerr << "maptel: maptel_transform: cycle detected\n";
         cerr << "maptel: maptel_transform: " << tel_src << " -> " << tel_dst << '\n';
+        assert(tel_dst != NULL 
+               && len >= strlen(cycle_detected ? tel_src : tel_current.c_str()) + 1);
     }
 }
 
+}
