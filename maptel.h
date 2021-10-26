@@ -1,14 +1,17 @@
 #ifndef __MAPTEL_H
 #define __MAPTEL_H
 
-#include<stdlib.h>
-
 #ifdef __cplusplus
 
-#include<iostream>
+#include <cstdlib>
+#include <iostream>
 
 namespace jnp1 {
     extern "C" {
+
+#else
+#include <stdlib.h>
+
 #endif
 
 /* Tworzy słownik i zwraca liczbę naturalną będącą jego identyfikatorem. */
@@ -19,7 +22,7 @@ namespace jnp1 {
 
 /* Wstawia do słownika o identyfikatorze id informację o zmianie numeru
  * tel_src na numer tel_dst. Nadpisuje ewentualną istniejącą informację. */
-    void maptel_insert(unsigned long id, char const *tel_src, 
+    void maptel_insert(unsigned long id, char const *tel_src,
                        char const *tel_dst);
 
 /* Jeśli w słowniku o identyfikatorze id jest informacja o zmianie numeru

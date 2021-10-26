@@ -1,66 +1,54 @@
-#include"maptel.h"
-#include<stdlib.h>
-#include<string>
-#include<cassert>
-#include<cstring>
-#include<iostream>
-#include<unordered_map>
-#include<regex>
+#include "maptel.h"
+#include <stdlib.h>
+#include <string>
+#include <cassert>
+#include <cstring>
+#include <iostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <regex>
 
-#ifndef NDEBUG
-const bool debug = true;
-#else
+#ifdef NDEBUG
 const bool debug = false;
+#else
+const bool debug = true;
 #endif
 
 using namespace std;
 
-namespace jnp1 {
-
-    size_t TEL_NUM_MAX_LEN = 22;
+namespace {
 
     using dict_t = unordered_map<string, string>;
 
-    static unordered_map<size_t, dict_t> &dictionaries() {
+    unordered_map<size_t, dict_t> &dictionaries() {
         static unordered_map<size_t, dict_t> dictionaries = (
                 unordered_map<size_t, dict_t>()
         );
         return dictionaries;
     }
 
-    static unordered_map<string, unsigned long long> &colors() {
-        static unordered_map<string, unsigned long long> colors = (
-                unordered_map<string, unsigned long long>()
-        );
-        return colors;
-    }
+    size_t max_id = -1;
 
-    static unsigned long long COLOR = 0;
-
-    static bool tel_visited(string tel) {
-        unordered_map<string, unsigned long long>::iterator color_it =
-                colors().find(tel);
-        return color_it != colors().end() && color_it->second == COLOR;
-    }
-
-
-    static size_t max_id = -1;
-
-    static vector<size_t> &free_ids() {
+    vector<size_t> &free_ids() {
         static vector<size_t> free_ids = vector<size_t>();
         return free_ids;
     }
 
-    static bool is_correct_id(unsigned long id) {
+    bool is_correct_id(unsigned long id) {
         return dictionaries().find(id) != dictionaries().end();
     }
 
-    static bool is_correct_tel_num(const char *tel_num) {
-        static regex tel_num_regex = regex("[0-9]{0,22}");
+    bool is_correct_tel_num(const char *tel_num) {
+        static regex tel_num_regex = regex("[0-9]{1,22}");
         if (tel_num == NULL)
             return false;
         return regex_match(tel_num, tel_num_regex);
     }
+}
+
+namespace jnp1 {
+
+    size_t TEL_NUM_MAX_LEN = 22;
 
     unsigned long maptel_create(void) {
         if (debug)
@@ -103,15 +91,16 @@ namespace jnp1 {
 
     void maptel_insert(unsigned long id, char const *tel_src,
                        char const *tel_dst) {
+        auto dict_it = dictionaries().find(id);
         if (debug) {
             cerr << "maptel: maptel_insert("
                  << id << ", " << tel_src << ", " << tel_dst << ")\n";
             assert(is_correct_tel_num(tel_src));
             assert(is_correct_tel_num(tel_dst));
-            assert(is_correct_id(id));
+            assert(dict_it != dictionaries().end());
         }
 
-        dictionaries()[id][tel_src] = string(tel_dst);
+        dict_it->second[tel_src] = tel_dst;
 
         if (debug)
             cerr << "maptel: maptel_insert: inserted\n";
@@ -140,23 +129,24 @@ namespace jnp1 {
     void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
                           size_t len) {
         if (debug) {
+            assert(tel_dst != NULL);
             cerr << "maptel: maptel_transform("
                  << id << ", " << tel_src << ", "
                  << (void *) tel_dst << ", " << len << ")\n";
             assert(is_correct_id(id));
             assert(is_correct_tel_num(tel_src));
-            assert(tel_dst != NULL);
         }
 
         dict_t &dict = dictionaries().find(id)->second;
         string tel_current = tel_src;
+        size_t src_len = tel_current.size();
+        unordered_set<string> visited = unordered_set<string>();
         unordered_map<string, string>::iterator next_tel_it = 
             dict.find(tel_src);
-        colors()[tel_current] = COLOR;
         while (next_tel_it != dict.end() &&
-               !tel_visited(next_tel_it->second)) {
+               visited.find(next_tel_it->second) == visited.end()) {
             tel_current = next_tel_it->second;
-            colors()[tel_current] = COLOR;
+            visited.insert(tel_current);
             next_tel_it = dict.find(tel_current);
         }
 
@@ -165,17 +155,14 @@ namespace jnp1 {
             strncpy(tel_dst, tel_src, len);
         else
             strncpy(tel_dst, tel_current.c_str(), len);
-        COLOR++;
 
         if (debug) {
             if (cycle_detected)
                 cerr << "maptel: maptel_transform: cycle detected\n";
             cerr << "maptel: maptel_transform: "
                  << tel_src << " -> " << tel_dst << '\n';
-            assert(tel_dst != NULL && 
-                   len >= strlen(cycle_detected ? tel_src
-                                 : tel_current.c_str()) + 1);
+            assert(tel_dst != NULL &&
+                   len >= (cycle_detected ? src_len : tel_current.size()) + 1);
         }
     }
-
 }
