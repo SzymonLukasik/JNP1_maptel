@@ -129,10 +129,10 @@ namespace jnp1 {
     void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
                           size_t len) {
         if (debug) {
-            assert(tel_dst != NULL);
             cerr << "maptel: maptel_transform("
                  << id << ", " << tel_src << ", "
                  << (void *) tel_dst << ", " << len << ")\n";
+            assert(tel_dst != NULL);
             assert(is_correct_id(id));
             assert(is_correct_tel_num(tel_src));
         }
