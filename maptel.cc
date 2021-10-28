@@ -112,9 +112,6 @@ void save_final_transformation(char *tel_dst, size_t len,
 
 namespace jnp1 {
 
-/** Specifies maximum length of telephone number */
-size_t TEL_NUM_MAX_LEN = 22;
-
 unsigned long maptel_create(void) {
   if (debug)
     cerr << "maptel: maptel_create()\n";
