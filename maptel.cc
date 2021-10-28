@@ -26,12 +26,12 @@ namespace {
 using dict_t = unordered_map<string, string>;
 
 /**
- * Return id to dictionary mapping (created once only)
+ * Returns id to dictionary mapping (created once only)
  * @return id to dictionary mapping
  */
 unordered_map<size_t, dict_t> &dictionaries() {
   static unordered_map<size_t, dict_t> dictionaries =
-      (unordered_map<size_t, dict_t>());
+    unordered_map<size_t, dict_t>();
   return dictionaries;
 }
 
@@ -39,7 +39,7 @@ unordered_map<size_t, dict_t> &dictionaries() {
 size_t max_id = -1;
 
 /**
- * Return vector with available ids smaller then max_id
+ * Returns vector with available ids smaller then max_id
  * @return vector with ids
  */
 vector<size_t> &free_ids() {
@@ -50,7 +50,7 @@ vector<size_t> &free_ids() {
 /**
  * Checks if given telephone number is valid
  * @param tel_num: telephone number
- * @return true iff given telephone number is valid
+ * @return whether given telephone number is valid
  */
 bool is_correct_tel_num(const char *tel_num) {
   static regex tel_num_regex = regex("[0-9]{1,22}");
@@ -60,20 +60,18 @@ bool is_correct_tel_num(const char *tel_num) {
 }
 
 /**
- * Helper function for maptel_transform
+ * Helper function for maptel_transform - finds final transform and 
+ * detects cycle.
  * @param id: id of dictionary
  * @param tel_src: source telephone number
  * @param loop_detected: placeholder for setting flag
  * @return transformed telephone number
  */
-string find_final_transformation(unsigned long id, const string &tel_src,
-                                 bool &loop_detected) {
-
-  dict_t &dict = dictionaries().find(id)->second;
+string find_final_transformation(const dict_t &dict, const string &tel_src,
+                                 bool &cycle_detected) {
   string tel_current = tel_src;
-
   unordered_set<string> visited = unordered_set<string>();
-  unordered_map<string, string>::iterator next_tel_it = dict.find(tel_src);
+  auto next_tel_it = dict.find(tel_src);
 
   while (next_tel_it != dict.end() &&
          visited.find(next_tel_it->second) == visited.end()) {
@@ -82,11 +80,35 @@ string find_final_transformation(unsigned long id, const string &tel_src,
     next_tel_it = dict.find(tel_current);
   }
 
-  loop_detected = next_tel_it != dict.end();
+  cycle_detected = next_tel_it != dict.end();
   return tel_current;
 }
 
-} // namespace
+/**
+ * Helper function for maptel_transform - saves final transform into tel_dst. 
+ * @param tel_dst: points to save destination
+ * @param len: size of dedicated memory
+ * @param tel_src_str: source telephone number
+ * @param tel_final: final telephone number
+ * @param cycle_detected: whether cycle was detected 
+ */
+void save_final_transformation(char *tel_dst, size_t len,
+                               const string &tel_src_str,
+                               const string &tel_final, bool cycle_detected) {
+  string str_to_save = cycle_detected ? tel_src_str : tel_final;
+  if (debug) {
+    if (cycle_detected)
+      cerr << "maptel: maptel_transform: cycle detected\n";
+    assert(tel_dst != NULL && len >= str_to_save.size() + 1);
+  }
+
+  strncpy(tel_dst, str_to_save.c_str(), len);
+  
+  if (debug)
+    cerr << "maptel: maptel_transform: " << tel_src_str << " -> " << tel_dst<< '\n';
+}
+
+}
 
 namespace jnp1 {
 
@@ -133,11 +155,12 @@ void maptel_delete(unsigned long id) {
     cerr << "maptel: maptel_delete: map " << id << " deleted\n";
 }
 
-void maptel_insert(unsigned long id, char const *tel_src, char const *tel_dst) {
+void maptel_insert(unsigned long id, char const *tel_src,
+                   char const *tel_dst) {
   auto dict_it = dictionaries().find(id);
   if (debug) {
-    cerr << "maptel: maptel_insert(" << id << ", " << tel_src << ", " << tel_dst
-         << ")\n";
+    cerr << "maptel: maptel_insert(" 
+         << id << ", " << tel_src << ", " << tel_dst << ")\n";
     assert(is_correct_tel_num(tel_src));
     assert(is_correct_tel_num(tel_dst));
     assert(dict_it != dictionaries().end());
@@ -183,21 +206,12 @@ void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
     assert(is_correct_tel_num(tel_src));
   }
 
+  const dict_t &dict = iter_id->second;
+  const string tel_src_str = tel_src;
   bool cycle_detected;
-  string tel_final = find_final_transformation(id, tel_src, cycle_detected);
-
-  if (cycle_detected)
-    strncpy(tel_dst, tel_src, len);
-  else
-    strncpy(tel_dst, tel_final.c_str(), len);
-
-  if (debug) {
-    if (cycle_detected)
-      cerr << "maptel: maptel_transform: cycle detected\n";
-    cerr << "maptel: maptel_transform: " << tel_src << " -> " << tel_dst
-         << '\n';
-    assert(tel_dst != NULL &&
-           len >= strlen(cycle_detected ? tel_src : tel_final.c_str()) + 1);
-  }
+  string tel_final = 
+    find_final_transformation(dict, tel_src_str, cycle_detected);
+  save_final_transformation(tel_dst, len, tel_src_str, tel_final,
+                            cycle_detected);
 }
-} // namespace jnp1
+}
