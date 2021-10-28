@@ -74,10 +74,6 @@ namespace jnp1 {
 /** Specifies maximum length of telephone number */
 size_t TEL_NUM_MAX_LEN = 22;
 
-/**
- * Creates new dictionary
- * @return id of the created dictionary
- */
 unsigned long maptel_create(void) {
   if (debug)
     cerr << "maptel: maptel_create()\n";
@@ -99,10 +95,6 @@ unsigned long maptel_create(void) {
   return new_id;
 }
 
-/**
- * Deletes dictionary of given id
- * @param id: id of dictionary to be deleted
- */
 void maptel_delete(unsigned long id) {
   if (debug) {
     cerr << "maptel: maptel_delete(" << id << ")\n";
@@ -120,12 +112,6 @@ void maptel_delete(unsigned long id) {
     cerr << "maptel: maptel_delete: map " << id << " deleted\n";
 }
 
-/**
- * Inserts a new telephone numbers mapping
- * @param id: id of dictionary
- * @param tel_src: original telephone number
- * @param tel_dst: mapped telephone number
- */
 void maptel_insert(unsigned long id, char const *tel_src, char const *tel_dst) {
   auto dict_it = dictionaries().find(id);
   if (debug) {
@@ -142,11 +128,6 @@ void maptel_insert(unsigned long id, char const *tel_src, char const *tel_dst) {
     cerr << "maptel: maptel_insert: inserted\n";
 }
 
-/**
- * Erases mapping of given telephone number in given dictionary
- * @param id: id of dictionary
- * @param tel_src: telephone number
- */
 void maptel_erase(unsigned long id, char const *tel_src) {
   if (debug) {
     cerr << "maptel: maptel_erase(" << id << ", " << tel_src << ")\n";
@@ -167,14 +148,6 @@ void maptel_erase(unsigned long id, char const *tel_src) {
     cerr << "maptel: maptel_erase: erased\n";
 }
 
-/**
- * Finds number to which given number can be mapped (which is the last possible
- * mapping). If case no such number exists, original number is returned
- * @param id: id of dictionary
- * @param tel_src: telephone number
- * @param tel_dst: placeholder for returning the result in
- * @param len: placeholder size
- */
 void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
                       size_t len) {
   if (debug) {
