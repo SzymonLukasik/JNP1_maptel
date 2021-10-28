@@ -41,6 +41,7 @@ void maptel_erase(unsigned long id, char const *tel_src);
 void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
                           size_t len);
 
+/** Określa maksymalną dłuość numeru telefonu. */
 static const size_t TEL_NUM_MAX_LEN = 22;
 
 #ifdef __cplusplus
