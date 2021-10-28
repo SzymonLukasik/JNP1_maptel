@@ -48,15 +48,6 @@ vector<size_t> &free_ids() {
 }
 
 /**
- * Checks if given id is a valid dictionary id
- * @param id: id to be validated
- * @return true iff given id is a valid dictionary id
- */
-bool is_correct_id(unsigned long id) {
-  return dictionaries().find(id) != dictionaries().end();
-}
-
-/**
  * Checks if given telephone number is valid
  * @param tel_num: telephone number
  * @return true iff given telephone number is valid
@@ -67,6 +58,34 @@ bool is_correct_tel_num(const char *tel_num) {
     return false;
   return regex_match(tel_num, tel_num_regex);
 }
+
+/**
+ * Helper function for maptel_transform
+ * @param id: id of dictionary
+ * @param tel_src: source telephone number
+ * @param loop_detected: placeholder for setting flag
+ * @return transformed telephone number
+ */
+string find_final_transformation(unsigned long id, const string &tel_src,
+                                 bool &loop_detected) {
+
+  dict_t &dict = dictionaries().find(id)->second;
+  string tel_current = tel_src;
+
+  unordered_set<string> visited = unordered_set<string>();
+  unordered_map<string, string>::iterator next_tel_it = dict.find(tel_src);
+
+  while (next_tel_it != dict.end() &&
+         visited.find(next_tel_it->second) == visited.end()) {
+    tel_current = next_tel_it->second;
+    visited.insert(tel_current);
+    next_tel_it = dict.find(tel_current);
+  }
+
+  loop_detected = next_tel_it != dict.end();
+  return tel_current;
+}
+
 } // namespace
 
 namespace jnp1 {
@@ -96,9 +115,11 @@ unsigned long maptel_create(void) {
 }
 
 void maptel_delete(unsigned long id) {
+  auto iter_id = dictionaries().find(id);
+  auto iter_end = dictionaries().end();
   if (debug) {
     cerr << "maptel: maptel_delete(" << id << ")\n";
-    assert(is_correct_id(id));
+    assert(iter_id != iter_end);
   }
 
   if (id == max_id)
@@ -129,9 +150,11 @@ void maptel_insert(unsigned long id, char const *tel_src, char const *tel_dst) {
 }
 
 void maptel_erase(unsigned long id, char const *tel_src) {
+  auto iter_id = dictionaries().find(id);
+  auto iter_end = dictionaries().end();
   if (debug) {
     cerr << "maptel: maptel_erase(" << id << ", " << tel_src << ")\n";
-    assert(is_correct_id(id));
+    assert(iter_id != iter_end);
     assert(is_correct_tel_num(tel_src));
   }
 
@@ -150,31 +173,23 @@ void maptel_erase(unsigned long id, char const *tel_src) {
 
 void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
                       size_t len) {
+  auto iter_id = dictionaries().find(id);
+  auto iter_end = dictionaries().end();
   if (debug) {
     cerr << "maptel: maptel_transform(" << id << ", " << tel_src << ", "
          << (void *)tel_dst << ", " << len << ")\n";
     assert(tel_dst != NULL);
-    assert(is_correct_id(id));
+    assert(iter_id != iter_end);
     assert(is_correct_tel_num(tel_src));
   }
 
-  dict_t &dict = dictionaries().find(id)->second;
-  string tel_current = tel_src;
-  size_t src_len = tel_current.size();
-  unordered_set<string> visited = unordered_set<string>();
-  unordered_map<string, string>::iterator next_tel_it = dict.find(tel_src);
-  while (next_tel_it != dict.end() &&
-         visited.find(next_tel_it->second) == visited.end()) {
-    tel_current = next_tel_it->second;
-    visited.insert(tel_current);
-    next_tel_it = dict.find(tel_current);
-  }
+  bool cycle_detected;
+  string tel_final = find_final_transformation(id, tel_src, cycle_detected);
 
-  bool cycle_detected = next_tel_it != dict.end();
   if (cycle_detected)
     strncpy(tel_dst, tel_src, len);
   else
-    strncpy(tel_dst, tel_current.c_str(), len);
+    strncpy(tel_dst, tel_final.c_str(), len);
 
   if (debug) {
     if (cycle_detected)
@@ -182,7 +197,7 @@ void maptel_transform(unsigned long id, char const *tel_src, char *tel_dst,
     cerr << "maptel: maptel_transform: " << tel_src << " -> " << tel_dst
          << '\n';
     assert(tel_dst != NULL &&
-           len >= (cycle_detected ? src_len : tel_current.size()) + 1);
+           len >= strlen(cycle_detected ? tel_src : tel_final.c_str()) + 1);
   }
 }
 } // namespace jnp1
