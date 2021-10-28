@@ -1,3 +1,7 @@
+/**
+ * @authors Szymon Łukasik, Olaf Placha
+ */
+
 #ifndef __MAPTEL_H
 #define __MAPTEL_H
 
